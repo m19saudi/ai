@@ -2,27 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>💧 WaterWise Analyzer</title>
+  <title>WaterWise Analyzer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #E6F7FF; margin: 0; padding: 0; }
-    header { background: #1890FF; color: white; padding: 1rem; text-align: center; font-size: 1.8rem; }
-    main { padding: 2rem; max-width: 900px; margin: auto; }
-    .card { background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    textarea { width: 100%; border-radius: 5px; padding: 0.5rem; font-family: monospace; }
-    input[type="file"] { margin: 1rem 0; }
-    button { background: #1890FF; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; }
+    header { background: #1890FF; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; }
+    main { padding: 1rem; max-width: 100%; margin: auto; box-sizing: border-box; }
+    .card { background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; overflow-x: auto; }
+    textarea { width: 100%; border-radius: 5px; padding: 0.5rem; font-family: monospace; font-size: 0.9rem; }
+    input[type="file"] { margin: 1rem 0; width: 100%; }
+    button { background: #1890FF; color: white; border: none; padding: 0.7rem 1rem; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; }
     button:hover { background: #1474cc; }
-    canvas { margin-top: 1rem; }
+    canvas { margin-top: 1rem; width: 100% !important; height: auto !important; }
+    table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+    th, td { padding: 0.5rem; text-align: left; border: 1px solid #ddd; }
     .alert { padding: 0.5rem; border-radius: 5px; margin: 0.5rem 0; font-weight: bold; }
     .alert.safe { background: #52C41A; color: white; }
     .alert.warning { background: #FAAD14; color: white; }
     .alert.danger { background: #FF4D4F; color: white; }
+
+    @media (max-width: 600px) {
+      main { padding: 0.5rem; }
+      header { font-size: 1.2rem; }
+      button { font-size: 0.95rem; }
+      textarea { font-size: 0.85rem; }
+    }
   </style>
 </head>
 <body>
-  <header>💧 WaterWise Analyzer</header>
+  <header>WaterWise Analyzer</header>
   <main>
     <div class="card">
       <h3>Upload your water CSV data</h3>
@@ -37,7 +46,7 @@
 
     <div class="card">
       <h3>Summary Table</h3>
-      <table id="summaryTable" border="1" style="width:100%; border-collapse: collapse; display:none;">
+      <table id="summaryTable" style="display:none;">
         <thead><tr id="summaryHeader"></tr></thead>
         <tbody id="summaryBody"></tbody>
       </table>
@@ -50,7 +59,7 @@
   </main>
 
   <script>
-    // Utility to parse CSV to JSON
+    // Parse CSV to JSON
     function csvToJson(csv) {
       const lines = csv.trim().split("\n");
       const headers = lines[0].split(",");
@@ -62,7 +71,6 @@
       });
     }
 
-    // Analyze button
     document.getElementById('analyze').onclick = async () => {
       const file = document.getElementById('csvFile').files[0];
       const aiOutput = document.getElementById('aiOutput');
@@ -74,7 +82,7 @@
       const text = await file.text();
       const jsonData = csvToJson(text);
 
-      // Call backend AI
+      // AI backend call
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
@@ -87,7 +95,7 @@
         aiOutput.value = "Error connecting to AI: " + err;
       }
 
-      // Build summary table
+      // Summary table
       const keys = Object.keys(jsonData[0]);
       const headerRow = document.getElementById('summaryHeader');
       headerRow.innerHTML = "";
@@ -95,14 +103,14 @@
 
       const body = document.getElementById('summaryBody');
       body.innerHTML = "";
-      jsonData.forEach((row) => {
+      jsonData.forEach(row => {
         const tr = document.createElement('tr');
         keys.forEach(k => { const td = document.createElement('td'); td.textContent = row[k]; tr.appendChild(td); });
         body.appendChild(tr);
       });
       document.getElementById('summaryTable').style.display = 'table';
 
-      // Chart example: progressive animated line chart with colored legends
+      // Chart
       const numericKeys = keys.filter(k => typeof jsonData[0][k] === 'number');
       if (numericKeys.length > 0) {
         const ctx = document.getElementById('chartCanvas').getContext('2d');
