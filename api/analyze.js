@@ -6,7 +6,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ interpretation: "Invalid or empty CSV data." });
     }
 
-    // Build prompt safely
     const prompt = `Interpret the following CSV data (3 values per row) in simple terms:\n${JSON.stringify(data)}`;
 
     const response = await fetch("https://router.huggingface.co/api/chat/completions", {
@@ -23,13 +22,9 @@ export default async function handler(req, res) {
     });
 
     const text = await response.text();
-    console.log("Hugging Face raw response:", text);
-
-    // Parse safely
     let aiResult;
-    try { aiResult = JSON.parse(text); } catch (err) { aiResult = null; }
+    try { aiResult = JSON.parse(text); } catch { aiResult = null; }
 
-    // Extract the interpretation text
     const interpretation = aiResult?.choices?.[0]?.message?.content || text || "No response from AI.";
 
     res.status(200).json({ interpretation });
