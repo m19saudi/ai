@@ -10,8 +10,7 @@
 </head>
 <body>
   <h2>CSV AI Analyzer</h2>
-
-  <p>Upload a CSV file with 3 values (single row or multiple rows).</p>
+  <p>Upload a CSV file with exactly 3 values (single row or multiple rows).</p>
   <input type="file" id="csvFile" accept=".csv">
   <br>
   <button id="analyze">Analyze with AI</button>
@@ -20,7 +19,6 @@
   <textarea id="output" rows="10" readonly placeholder="AI output will appear here..."></textarea>
 
   <script>
-    // Convert CSV to JSON (works for single or multiple rows)
     function csvToJson(csvText) {
       const lines = csvText.trim().split('\n');
       const result = [];
@@ -49,7 +47,7 @@
       const jsonData = csvToJson(text);
 
       try {
-        const res = await fetch('https://your-vercel-app.vercel.app/api/analyze', {
+        const res = await fetch('https://your-vercel-backend.vercel.app/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: jsonData })
