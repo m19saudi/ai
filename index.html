@@ -12,9 +12,7 @@
 </head>
 <body>
   <h2>CSV AI Analyzer</h2>
-  <p>Upload a CSV file with exactly 3 values per row.</p>
   <input type="file" id="csvFile" accept=".csv">
-  <br>
   <button id="analyze">Analyze with AI</button>
   <span id="loading">Analyzing... Please wait.</span>
   <div id="error"></div>
@@ -28,12 +26,10 @@
       const result = [];
       const headers = lines[0].split(',').map(h => h.trim());
       for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue; // skip empty lines
+        if (!lines[i].trim()) continue;
         const obj = {};
         const currentline = lines[i].split(',');
-        headers.forEach((header, index) => {
-          obj[header] = currentline[index]?.trim() || "";
-        });
+        headers.forEach((header, index) => obj[header] = currentline[index]?.trim() || "");
         result.push(obj);
       }
       return result;
@@ -48,10 +44,7 @@
       errorDiv.style.display = "none";
       output.value = "";
 
-      if (!file) {
-        alert("Please upload a CSV file.");
-        return;
-      }
+      if (!file) return alert("Please upload a CSV file.");
 
       loading.style.display = "inline";
 
@@ -68,16 +61,15 @@
         const data = await res.json();
 
         if (!res.ok) {
-          errorDiv.textContent = `Error from AI backend: ${data.interpretation || res.statusText}`;
+          errorDiv.textContent = data.interpretation || "AI backend error";
           errorDiv.style.display = "block";
-          output.value = "";
         } else {
           output.value = data.interpretation || "No response from AI.";
         }
 
       } catch (err) {
         console.error(err);
-        errorDiv.textContent = "Error connecting to AI. Check console logs.";
+        errorDiv.textContent = "Error connecting to AI.";
         errorDiv.style.display = "block";
       } finally {
         loading.style.display = "none";
