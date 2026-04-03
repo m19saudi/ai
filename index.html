@@ -1,78 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>CSV AI Analyzer</title>
+  <meta charset="UTF-8">
+  <title>💧 WaterWise Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; }
-    textarea { width: 100%; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
-    #loading { display: none; color: blue; font-weight: bold; margin-left: 10px; }
-    #error { color: red; font-weight: bold; margin-top: 10px; display: none; }
+    body { font-family: Arial, sans-serif; background: #E6F7FF; margin: 0; padding: 0; }
+    header { background: #1890FF; color: white; padding: 1rem; text-align: center; font-size: 1.8rem; }
+    main { padding: 2rem; max-width: 900px; margin: auto; }
+    .card { background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    textarea { width: 100%; border-radius: 5px; padding: 0.5rem; font-family: monospace; }
+    input[type="file"] { margin: 1rem 0; }
+    button { background: #1890FF; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #1474cc; }
+    canvas { margin-top: 1rem; }
+    .alert { padding: 0.5rem; border-radius: 5px; margin: 0.5rem 0; font-weight: bold; }
+    .alert.safe { background: #52C41A; color: white; }
+    .alert.warning { background: #FAAD14; color: white; }
+    .alert.danger { background: #FF4D4F; color: white; }
   </style>
 </head>
 <body>
-  <h2>CSV AI Analyzer</h2>
-  <input type="file" id="csvFile" accept=".csv">
-  <button id="analyze">Analyze with AI</button>
-  <span id="loading">Analyzing... Please wait.</span>
-  <div id="error"></div>
+  <header>💧 WaterWise Analyzer</header>
+  <main>
+    <div class="card">
+      <h3>Upload your water CSV data</h3>
+      <input type="file" id="csvFile" accept=".csv" />
+      <button id="analyze">Analyze Water Data</button>
+    </div>
 
-  <h3>AI Interpretation:</h3>
-  <textarea id="output" rows="10" readonly placeholder="AI output will appear here..."></textarea>
+    <div class="card">
+      <h3>AI Analysis</h3>
+      <textarea id="aiOutput" rows="8" readonly placeholder="AI analysis will appear here..."></textarea>
+    </div>
+
+    <div class="card">
+      <h3>Summary Table</h3>
+      <table id="summaryTable" border="1" style="width:100%; border-collapse: collapse; display:none;">
+        <thead><tr id="summaryHeader"></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Charts</h3>
+      <canvas id="chartCanvas"></canvas>
+    </div>
+  </main>
 
   <script>
-    function csvToJson(csvText) {
-      const lines = csvText.trim().split('\n');
-      const result = [];
-      const headers = lines[0].split(',').map(h => h.trim());
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
+    // Utility to parse CSV to JSON
+    function csvToJson(csv) {
+      const lines = csv.trim().split("\n");
+      const headers = lines[0].split(",");
+      return lines.slice(1).map(line => {
+        const data = line.split(",");
         const obj = {};
-        const currentline = lines[i].split(',');
-        headers.forEach((header, index) => obj[header] = currentline[index]?.trim() || "");
-        result.push(obj);
-      }
-      return result;
+        headers.forEach((h,i)=>obj[h.trim()]=isNaN(data[i])?data[i].trim():parseFloat(data[i]));
+        return obj;
+      });
     }
 
+    // Analyze button
     document.getElementById('analyze').onclick = async () => {
       const file = document.getElementById('csvFile').files[0];
-      const output = document.getElementById('output');
-      const loading = document.getElementById('loading');
-      const errorDiv = document.getElementById('error');
+      const aiOutput = document.getElementById('aiOutput');
+      aiOutput.value = "Analyzing...";
+      document.getElementById('summaryTable').style.display = 'none';
 
-      errorDiv.style.display = "none";
-      output.value = "";
+      if (!file) { aiOutput.value = "Please upload a CSV file."; return; }
 
-      if (!file) return alert("Please upload a CSV file.");
+      const text = await file.text();
+      const jsonData = csvToJson(text);
 
-      loading.style.display = "inline";
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userInput: jsonData })
+      });
 
-      try {
-        const text = await file.text();
-        const jsonData = csvToJson(text);
+      const data = await res.json();
+      aiOutput.value = data.output;
 
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: jsonData })
+      // Build summary table
+      const keys = Object.keys(jsonData[0]);
+      const headerRow = document.getElementById('summaryHeader');
+      headerRow.innerHTML = "";
+      keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; headerRow.appendChild(th); });
+
+      const body = document.getElementById('summaryBody');
+      body.innerHTML = "";
+      jsonData.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        keys.forEach(k => { const td = document.createElement('td'); td.textContent = row[k]; tr.appendChild(td); });
+        body.appendChild(tr);
+      });
+      document.getElementById('summaryTable').style.display = 'table';
+
+      // Chart example: first numeric fields
+      const numericKeys = keys.filter(k=>typeof jsonData[0][k]==='number');
+      if(numericKeys.length>0){
+        const ctx = document.getElementById('chartCanvas').getContext('2d');
+        if(window.myChart) window.myChart.destroy();
+        window.myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: jsonData.map((_,i)=>i+1),
+            datasets: numericKeys.map(k=>({
+              label:k,
+              data: jsonData.map(r=>r[k]),
+              fill:false,
+              borderColor: '#1890FF'
+            }))
+          },
+          options:{responsive:true, plugins:{legend:{position:'top'}}}
         });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          errorDiv.textContent = data.interpretation || "AI backend error";
-          errorDiv.style.display = "block";
-        } else {
-          output.value = data.interpretation || "No response from AI.";
-        }
-
-      } catch (err) {
-        console.error(err);
-        errorDiv.textContent = "Error connecting to AI.";
-        errorDiv.style.display = "block";
-      } finally {
-        loading.style.display = "none";
       }
     };
   </script>
