@@ -6,7 +6,8 @@
     body { font-family: Arial, sans-serif; margin: 30px; }
     textarea { width: 100%; font-size: 16px; }
     button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
-    #loading { display: none; color: blue; font-weight: bold; }
+    #loading { display: none; color: blue; font-weight: bold; margin-left: 10px; }
+    #error { color: red; font-weight: bold; margin-top: 10px; display: none; }
   </style>
 </head>
 <body>
@@ -16,6 +17,7 @@
   <br>
   <button id="analyze">Analyze with AI</button>
   <span id="loading">Analyzing... Please wait.</span>
+  <div id="error"></div>
 
   <h3>AI Interpretation:</h3>
   <textarea id="output" rows="10" readonly placeholder="AI output will appear here..."></textarea>
@@ -26,6 +28,7 @@
       const result = [];
       const headers = lines[0].split(',').map(h => h.trim());
       for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue; // skip empty lines
         const obj = {};
         const currentline = lines[i].split(',');
         headers.forEach((header, index) => {
@@ -40,13 +43,16 @@
       const file = document.getElementById('csvFile').files[0];
       const output = document.getElementById('output');
       const loading = document.getElementById('loading');
+      const errorDiv = document.getElementById('error');
+
+      errorDiv.style.display = "none";
+      output.value = "";
 
       if (!file) {
         alert("Please upload a CSV file.");
         return;
       }
 
-      output.value = "";
       loading.style.display = "inline";
 
       try {
@@ -60,10 +66,19 @@
         });
 
         const data = await res.json();
-        output.value = data.interpretation || "No response from AI.";
+
+        if (!res.ok) {
+          errorDiv.textContent = `Error from AI backend: ${data.interpretation || res.statusText}`;
+          errorDiv.style.display = "block";
+          output.value = "";
+        } else {
+          output.value = data.interpretation || "No response from AI.";
+        }
+
       } catch (err) {
         console.error(err);
-        output.value = "Error connecting to AI.";
+        errorDiv.textContent = "Error connecting to AI. Check console logs.";
+        errorDiv.style.display = "block";
       } finally {
         loading.style.display = "none";
       }
