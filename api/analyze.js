@@ -1,14 +1,14 @@
 export default async function handler(req, res) {
-  const { data } = req.body;
-
-  if (!data) {
-    console.error("No CSV data received.");
-    return res.status(400).json({ interpretation: "No CSV data received." });
-  }
-
-  const prompt = `Interpret the following CSV data:\n${JSON.stringify(data)}`;
-
   try {
+    const { data } = req.body;
+
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ interpretation: "Invalid or empty CSV data." });
+    }
+
+    // Build prompt safely
+    const prompt = `Interpret the following CSV data (3 values per row) in simple terms:\n${JSON.stringify(data)}`;
+
     const response = await fetch("https://router.huggingface.co/api/chat/completions", {
       method: "POST",
       headers: {
@@ -22,18 +22,20 @@ export default async function handler(req, res) {
       })
     });
 
-    const text = await response.text(); // raw text to debug
+    const text = await response.text();
     console.log("Hugging Face raw response:", text);
 
-    // Try to parse JSON safely
+    // Parse safely
     let aiResult;
-    try { aiResult = JSON.parse(text); } catch (e) { aiResult = null; }
+    try { aiResult = JSON.parse(text); } catch (err) { aiResult = null; }
 
+    // Extract the interpretation text
     const interpretation = aiResult?.choices?.[0]?.message?.content || text || "No response from AI.";
+
     res.status(200).json({ interpretation });
 
   } catch (error) {
-    console.error("Router API error:", error);
+    console.error("Function crash:", error);
     res.status(500).json({ interpretation: "Error connecting to AI." });
   }
 }
