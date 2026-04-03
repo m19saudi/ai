@@ -19,6 +19,7 @@
   <textarea id="output" rows="10" readonly placeholder="AI output will appear here..."></textarea>
 
   <script>
+    // Convert CSV to JSON
     function csvToJson(csvText) {
       const lines = csvText.trim().split('\n');
       const result = [];
@@ -47,7 +48,7 @@
       const jsonData = csvToJson(text);
 
       try {
-        const res = await fetch('https://your-vercel-backend.vercel.app/api/analyze', {
+        const res = await fetch('/api/analyze', { // points to backend in same Vercel project
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: jsonData })
