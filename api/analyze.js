@@ -1,7 +1,5 @@
 export default async function handler(req, res) {
   const { data } = req.body;
-
-  // Prepare prompt for Gemma AI
   const prompt = `Interpret the following CSV data (3 values per row) in simple terms:\n${JSON.stringify(data)}`;
 
   try {
@@ -15,10 +13,14 @@ export default async function handler(req, res) {
     });
 
     const aiResult = await response.json();
+    console.log("Hugging Face response:", aiResult); // <--- this will show in Vercel logs
 
-    res.status(200).json({ interpretation: aiResult[0]?.generated_text || "No response from AI." });
+    // Try multiple possible fields for Gemma output
+    const interpretation = aiResult[0]?.generated_text || aiResult?.generated_text || JSON.stringify(aiResult);
+
+    res.status(200).json({ interpretation });
   } catch (error) {
-    console.error(error);
+    console.error("Error calling Hugging Face:", error);
     res.status(500).json({ interpretation: "Error connecting to AI." });
   }
 }
