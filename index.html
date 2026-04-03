@@ -6,20 +6,21 @@
     body { font-family: Arial, sans-serif; margin: 30px; }
     textarea { width: 100%; font-size: 16px; }
     button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
+    #loading { display: none; color: blue; font-weight: bold; }
   </style>
 </head>
 <body>
   <h2>CSV AI Analyzer</h2>
-  <p>Upload a CSV file with exactly 3 values (single row or multiple rows).</p>
+  <p>Upload a CSV file with exactly 3 values per row.</p>
   <input type="file" id="csvFile" accept=".csv">
   <br>
   <button id="analyze">Analyze with AI</button>
+  <span id="loading">Analyzing... Please wait.</span>
 
   <h3>AI Interpretation:</h3>
   <textarea id="output" rows="10" readonly placeholder="AI output will appear here..."></textarea>
 
   <script>
-    // Convert CSV to JSON
     function csvToJson(csvText) {
       const lines = csvText.trim().split('\n');
       const result = [];
@@ -37,28 +38,34 @@
 
     document.getElementById('analyze').onclick = async () => {
       const file = document.getElementById('csvFile').files[0];
+      const output = document.getElementById('output');
+      const loading = document.getElementById('loading');
+
       if (!file) {
         alert("Please upload a CSV file.");
         return;
       }
 
-      document.getElementById('output').value = "Analyzing... please wait.";
-
-      const text = await file.text();
-      const jsonData = csvToJson(text);
+      output.value = "";
+      loading.style.display = "inline";
 
       try {
-        const res = await fetch('/api/analyze', { // points to backend in same Vercel project
+        const text = await file.text();
+        const jsonData = csvToJson(text);
+
+        const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: jsonData })
         });
 
         const data = await res.json();
-        document.getElementById('output').value = data.interpretation || "No response from AI.";
+        output.value = data.interpretation || "No response from AI.";
       } catch (err) {
         console.error(err);
-        document.getElementById('output').value = "Error connecting to AI backend.";
+        output.value = "Error connecting to AI.";
+      } finally {
+        loading.style.display = "none";
       }
     };
   </script>
