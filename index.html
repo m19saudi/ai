@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>💧 WaterWise Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #E6F7FF; margin: 0; padding: 0; }
@@ -73,14 +74,18 @@
       const text = await file.text();
       const jsonData = csvToJson(text);
 
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userInput: jsonData })
-      });
-
-      const data = await res.json();
-      aiOutput.value = data.output;
+      // Call backend AI
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userInput: jsonData })
+        });
+        const data = await res.json();
+        aiOutput.value = data.output;
+      } catch(err) {
+        aiOutput.value = "Error connecting to AI: " + err;
+      }
 
       // Build summary table
       const keys = Object.keys(jsonData[0]);
@@ -90,30 +95,58 @@
 
       const body = document.getElementById('summaryBody');
       body.innerHTML = "";
-      jsonData.forEach((row, i) => {
+      jsonData.forEach((row) => {
         const tr = document.createElement('tr');
         keys.forEach(k => { const td = document.createElement('td'); td.textContent = row[k]; tr.appendChild(td); });
         body.appendChild(tr);
       });
       document.getElementById('summaryTable').style.display = 'table';
 
-      // Chart example: first numeric fields
-      const numericKeys = keys.filter(k=>typeof jsonData[0][k]==='number');
-      if(numericKeys.length>0){
+      // Chart example: progressive animated line chart with colored legends
+      const numericKeys = keys.filter(k => typeof jsonData[0][k] === 'number');
+      if (numericKeys.length > 0) {
         const ctx = document.getElementById('chartCanvas').getContext('2d');
-        if(window.myChart) window.myChart.destroy();
+        if (window.myChart) window.myChart.destroy();
+
         window.myChart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: jsonData.map((_,i)=>i+1),
-            datasets: numericKeys.map(k=>({
-              label:k,
-              data: jsonData.map(r=>r[k]),
-              fill:false,
-              borderColor: '#1890FF'
-            }))
+            labels: jsonData.map((_, i) => i + 1),
+            datasets: numericKeys.map((k, idx) => {
+              const color = `hsl(${(idx * 60) % 360}, 70%, 50%)`;
+              return {
+                label: k,
+                data: jsonData.map(r => r[k]),
+                fill: false,
+                borderColor: color,
+                backgroundColor: color,
+                tension: 0.3,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              };
+            })
           },
-          options:{responsive:true, plugins:{legend:{position:'top'}}}
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  color: '#000',
+                  usePointStyle: true,
+                  pointStyle: 'circle'
+                }
+              }
+            },
+            animation: {
+              duration: 1500,
+              easing: 'easeOutQuart'
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: 'Value' } },
+              x: { title: { display: true, text: 'Sample Number' } }
+            }
+          }
         });
       }
     };
